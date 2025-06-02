@@ -549,3 +549,165 @@ void countAllBooks() {
     cout << " Checked out copies: " << (totalCopies - availableCopies) << "\n";
     cout << "-------------------------\n";
 }
+
+void addBooks() {
+    int count;
+    if (!getSafeInt(count, "Enter the number of books to add (1-100): ", 1, 100)) return;
+
+    for (int i = 0; i < count; i++) {
+        cout << "\n--- Adding Book #" << i+1 << " ---\n";
+
+        string category = selectCategory();
+        if (category.empty()) {
+            cout << "Returning to main menu.\n";
+            return;
+        }
+
+        string title, author;
+        int year, totalCopies;
+
+        do {
+            cout << "Enter book title (minimum 4 letters, letters and spaces only): ";
+            getline(cin, title);
+        } while (!isValidInput(title, "^[a-zA-Z ]+$", 4));
+
+        do {
+            cout << "Enter author name (minimum 4 letters, letters and spaces only): ";
+            getline(cin, author);
+        } while (!isValidInput(author, "^[a-zA-Z ]+$", 4));
+
+        if (bookExists(title, author)) {
+            Book* temp = head;
+            while (temp) {
+                if (caseInsensitiveCompare(temp->title, title) &&
+                    caseInsensitiveCompare(temp->author, author)) {
+                    cout << "Enter additional copies to add (1-1000): ";
+                    if (!getSafeInt(totalCopies, "", 1, 1000)) return;
+
+                    int newTotal = temp->totalCopies + totalCopies;
+                    int newAvailable = temp->availableCopies + totalCopies;
+                    temp->totalCopies = newTotal;
+                    temp->availableCopies = newAvailable;
+                    cout << "Book already exists. Added " << totalCopies << " more copies.\n";
+                    cout << " New total: " << newTotal << " copies (" << newAvailable << " available)\n";
+                    saveToFile();
+                    break;
+                }
+                temp = temp->next;
+            }
+        } else {
+            if (!getSafeInt(year, "Enter year of publication (1800-2025): ", 1800, 2025)) return;
+            if (!getSafeInt(totalCopies, "Enter total number of copies (1-1000): ", 1, 1000)) return;
+
+            string dt = getCurrentDateTime();
+            addBookToList(title, author, year, category, dt, totalCopies, totalCopies);
+            cout << "Book added successfully with " << totalCopies << " copies.\n";
+        }
+    }
+    saveToFile();
+}
+
+void searchBooks() {
+    string category = selectCategory();
+    if (category.empty()) {
+        cout << "Returning to main menu.\n";
+        return;
+    }
+
+    string title;
+    cout << "Enter title to search in category '" << category << "': ";
+    getline(cin, title);
+
+    Book* temp = head;
+    bool found = false;
+
+    while (temp) {
+        if (caseInsensitiveCompare(temp->category, category) &&
+            caseInsensitiveCompare(temp->title, title)) {
+            displayBookDetails(temp);
+            found = true;
+            break;
+        }
+        temp = temp->next;
+    }
+
+    if (!found) {
+        cout << " Book not found in category '" << category << "'.\n";
+    }
+}
+
+void deleteBook() {
+    string category = selectCategory();
+    if (category.empty()) {
+        cout << "Returning to main menu.\n";
+        return;
+    }
+
+    string title;
+    cout << "Enter title to delete from category '" << category << "': ";
+    getline(cin, title);
+
+    Book* temp = head;
+    while (temp) {
+        if (caseInsensitiveCompare(temp->category, category) &&
+            caseInsensitiveCompare(temp->title, title)) {
+            displayBookDetails(temp);
+
+            int copiesToDelete;
+            if (!getSafeInt(copiesToDelete, "Enter number of copies to delete (1-" + to_string(temp->totalCopies) + "): ", 1, temp->totalCopies)) {
+                return;
+            }
+
+            if (copiesToDelete > temp->availableCopies) {
+                cout << " Warning: You're trying to delete more copies than are currently available.\n";
+                cout << " Only " << temp->availableCopies << " copies are available to delete.\n";
+
+                char confirm;
+                cout << " Do you want to proceed? (y/n): ";
+                cin >> confirm;
+                cin.ignore();
+
+                if (tolower(confirm) != 'y') {
+                    cout << " Delete operation cancelled.\n";
+                    return;
+                }
+            }
+
+            string deletionTime = getCurrentDateTime();
+            string deletionDetails = "Deleted " + to_string(copiesToDelete) +
+                                   " copies of '" + title +
+                                   "' from category '" + category +
+                                   "' on " + deletionTime;
+
+            if (copiesToDelete == temp->totalCopies) {
+                if (temp->prev)
+                    temp->prev->next = temp->next;
+                else
+                    head = temp->next;
+
+                if (temp->next)
+                    temp->next->prev = temp->prev;
+
+                delete temp;
+                cout << " Book record completely deleted.\n";
+            } else {
+                temp->totalCopies -= copiesToDelete;
+                temp->availableCopies = max(0, temp->availableCopies - copiesToDelete);
+                cout << " " << copiesToDelete << " copies removed from inventory.\n";
+                displayBookDetails(temp);
+            }
+
+            ofstream logfile("library_deletions.log", ios::app);
+            if (logfile.is_open()) {
+                logfile << deletionDetails << "\n";
+                logfile.close();
+            }
+
+            saveToFile();
+            cout << " Deletion logged: " << deletionDetails << "\n";
+            return;
+        }
+        temp = temp->next;
+    }
+    cout << " Book not found in category '" << category << "'.\n";
+}
