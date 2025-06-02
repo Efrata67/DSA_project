@@ -495,3 +495,57 @@ void loadFromFile() {
         saveToFile();
     }
 }
+
+void countBooksInCategory(const string& category) {
+    if (!head) {
+        cout << "No books in the library.\n";
+        return;
+    }
+
+    int bookCount = 0;
+    int totalCopies = 0;
+    int availableCopies = 0;
+    Book* temp = head;
+
+    while (temp) {
+        if (caseInsensitiveCompare(temp->category, category)) {
+            bookCount++;
+            totalCopies += temp->totalCopies;
+            availableCopies += temp->availableCopies;
+        }
+        temp = temp->next;
+    }
+
+    cout << "\n--- Book Count for Category: " << category << " ---\n";
+    cout << " Number of unique titles: " << bookCount << "\n";
+    cout << " Total copies: " << totalCopies << "\n";
+    cout << " Available copies: " << availableCopies << "\n";
+    cout << " Checked out copies: " << (totalCopies - availableCopies) << "\n";
+    cout << "-------------------------\n";
+}
+
+void countAllBooks() {
+    if (!head) {
+        cout << "No books in the library.\n";
+        return;
+    }
+
+    int bookCount = 0;
+    int totalCopies = 0;
+    int availableCopies = 0;
+    Book* temp = head;
+
+    while (temp) {
+        bookCount++;
+        totalCopies += temp->totalCopies;
+        availableCopies += temp->availableCopies;
+        temp = temp->next;
+    }
+
+    cout << "\n--- Total Library Statistics ---\n";
+    cout << " Number of unique titles: " << bookCount << "\n";
+    cout << " Total copies: " << totalCopies << "\n";
+    cout << " Available copies: " << availableCopies << "\n";
+    cout << " Checked out copies: " << (totalCopies - availableCopies) << "\n";
+    cout << "-------------------------\n";
+}
