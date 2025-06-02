@@ -267,3 +267,47 @@ void showCategoryMenu() {
 
     cout << index << ". Back to Main Menu\n";
 }
+
+string getCategoryByIndex(int index) {
+    Book* temp = head;
+    Book* checker;
+    int currentIndex = 1;
+
+    while (temp) {
+        bool foundEarlier = false;
+        checker = head;
+        while (checker != temp) {
+            if (caseInsensitiveCompare(checker->category, temp->category)) {
+                foundEarlier = true;
+                break;
+            }
+            checker = checker->next;
+        }
+
+        if (!foundEarlier) {
+            if (currentIndex == index) {
+                return temp->category;
+            }
+            currentIndex++;
+        }
+        temp = temp->next;
+    }
+    return "";
+}
+
+string selectCategory() {
+    int totalCategories = countCategories();
+    int choice;
+    int totalOptions = totalCategories + 1;
+
+    while (true) {
+        showCategoryMenu();
+        if (!getSafeInt(choice, "Select category (or " + to_string(totalCategories+1) + " to exit): ", 1, totalOptions)) continue;
+
+        if (choice <= totalCategories) {
+            return getCategoryByIndex(choice);
+        } else {
+            return "";
+        }
+    }
+}
