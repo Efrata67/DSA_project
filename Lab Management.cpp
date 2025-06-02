@@ -934,3 +934,190 @@ while (temp) {
 }
 return false;
 }
+
+void borrowBook() {
+    string category = selectCategory();
+    if (category.empty()) {
+        cout << "Borrowing cancelled.\n";
+        return;
+    }
+
+    displayBooksByCategory(category);
+
+    string title;
+    cout << "Enter the title of the book you want to borrow: ";
+    getline(cin, title);
+
+    Book* temp = head;
+    while (temp) {
+        if (caseInsensitiveCompare(temp->category, category) &&
+            caseInsensitiveCompare(temp->title, title)) {
+            displayBookDetails(temp);
+
+            if (temp->availableCopies <= 0) {
+                cout << "Sorry, no copies of this book are currently available.\n";
+                return;
+            }
+
+            string borrowerName, borrowerId;
+            do {
+                cout << "Enter your full name (minimum 3 letters, no numbers): ";
+                getline(cin, borrowerName);
+            } while (!isValidInput(borrowerName, "^[a-zA-Z ]+$", 3));
+
+            do {
+                cout << "Enter your ID (minimum 3 characters, letters or numbers): ";
+                getline(cin, borrowerId);
+                if (borrowerId.length() < 3) {
+                    cout << "ID must be at least 3 characters long.\n";
+                }
+            } while (borrowerId.length() < 3);
+
+            if (hasBorrowedSpecificBook(borrowerId, title, category)) {
+                cout << "Sorry, you have already borrowed a copy of this book.\n";
+                cout << "Please return it before borrowing another copy.\n";
+                return;
+            }
+
+            displayBorrowRules();
+
+            char confirm;
+            cout << "Do you want to proceed with borrowing 1 copy of '" << title << "'? (y/n): ";
+            cin >> confirm;
+            cin.ignore();
+
+            if (tolower(confirm) == 'y') {
+                temp->availableCopies -= 1;
+                saveToFile();
+
+                string borrowDate = getCurrentDateTime();
+                string returnDate = calculateReturnDate(14);
+
+                addBorrowRecord(title, category, borrowerName, borrowerId,
+                              1, borrowDate, returnDate);
+
+                cout << "\n--------- Borrowing Confirmation -----------\n";
+                cout << " Book Title: " << title << "\n";
+                cout << " Category: " << category << "\n";
+                cout << " Borrower Name: " << borrowerName << "\n";
+                cout << " Borrower ID: " << borrowerId << "\n";
+                cout << " Copies Borrowed: 1\n";
+                cout << " Borrow Date: " << borrowDate << "\n";
+                cout << " Due Date: " << returnDate << "\n";
+                cout << "-------------------------------------\n";
+                cout << "Thank you for borrowing from our library!\n";
+            } else {
+                cout << "Borrowing cancelled.\n";
+            }
+            return;
+        }
+        temp = temp->next;
+    }
+    cout << "Book not found in category '" << category << "'.\n";
+}
+
+void returnBook() {
+    string category = selectCategory();
+    if (category.empty()) {
+        cout << "Returning cancelled.\n";
+        return;
+    }
+
+    displayBooksByCategory(category);
+
+    string title;
+    cout << "Enter the title of the book you want to return: ";
+    getline(cin, title);
+
+    string borrowerName, borrowerId;
+    do {
+        cout << "Enter your full name (minimum 3 letters, no numbers): ";
+        getline(cin, borrowerName);
+    } while (!isValidInput(borrowerName, "^[a-zA-Z ]+$", 3));
+
+    do {
+        cout << "Enter your ID (minimum 3 characters, letters or numbers): ";
+        getline(cin, borrowerId);
+        if (borrowerId.length() < 3) {
+            cout << "ID must be at least 3 characters long.\n";
+        }
+    } while (borrowerId.length() < 3);
+
+    Book* book = head;
+    while (book) {
+        if (caseInsensitiveCompare(book->category, category) &&
+            caseInsensitiveCompare(book->title, title)) {
+            break;
+        }
+        book = book->next;
+    }
+
+    if (!book) {
+        cout << "Book not found in category '" << category << "'.\n";
+        return;
+    }
+
+    BorrowRecord* currentRecord = borrowHead;
+    BorrowRecord* selectedRecord = NULL;
+
+    while (currentRecord) {
+        if (caseInsensitiveCompare(currentRecord->bookTitle, title) &&
+            caseInsensitiveCompare(currentRecord->bookCategory, category) &&
+            caseInsensitiveCompare(currentRecord->borrowerName, borrowerName) &&
+            caseInsensitiveCompare(currentRecord->borrowerId, borrowerId) &&
+            !currentRecord->returned) {
+            selectedRecord = currentRecord;
+            break;
+        }
+        currentRecord = currentRecord->next;
+    }
+
+    if (!selectedRecord) {
+        cout << "No matching active borrow record found.\n";
+        return;
+    }
+
+    cout << "\nFound borrow record:\n";
+    cout << "Borrowed 1 copy on " << selectedRecord->borrowDate
+         << " (Due: " << selectedRecord->returnDate << ")\n";
+
+    char confirm;
+    cout << "Confirm return of 1 copy of '" << title << "'? (y/n): ";
+    cin >> confirm;
+    cin.ignore();
+
+    if (tolower(confirm) != 'y') {
+        cout << "Return cancelled.\n";
+        return;
+    }
+
+    string returnDate = getCurrentDateTime();
+    int daysLate = daysBetweenDates(selectedRecord->returnDate, returnDate);
+
+    book->availableCopies += 1;
+    saveToFile();
+
+    selectedRecord->borrowedCopies = 0;
+    selectedRecord->returned = true;
+    saveBorrowRecords();
+
+    cout << "\n>>>>>>> Return Confirmation <<<<<<<<\n";
+    cout << " Book Title: " << title << "\n";
+    cout << " Category: " << category << "\n";
+    cout << " Borrower Name: " << borrowerName << "\n";
+    cout << " Borrower ID: " << borrowerId << "\n";
+    cout << " Copies Returned: 1\n";
+    cout << " Return Date: " << returnDate << "\n";
+
+    if (daysLate > 0) {
+        int fine = daysLate * 5;
+        cout << " WARNING: This return is " << daysLate << " days late!\n";
+        cout << " Fine imposed: " << fine << " birr\n";
+        cout << " Please pay the fine at the library desk.\n";
+    } else {
+        cout << " Book returned on time. Thank you!\n";
+    }
+
+    cout << "------------------------------------\n";
+}
+
