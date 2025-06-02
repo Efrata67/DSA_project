@@ -311,3 +311,134 @@ string selectCategory() {
         }
     }
 }
+
+void swapBooks(Book* a, Book* b) {
+    string tempTitle = a->title;
+    string tempAuthor = a->author;
+    int tempYear = a->year;
+    int tempTotal = a->totalCopies;
+    int tempAvailable = a->availableCopies;
+    string tempCategory = a->category;
+    string tempDate = a->addedDate;
+
+    a->title = b->title;
+    a->author = b->author;
+    a->year = b->year;
+    a->totalCopies = b->totalCopies;
+    a->availableCopies = b->availableCopies;
+    a->category = b->category;
+    a->addedDate = b->addedDate;
+
+    b->title = tempTitle;
+    b->author = tempAuthor;
+    b->year = tempYear;
+    b->totalCopies = tempTotal;
+    b->availableCopies = tempAvailable;
+    b->category = tempCategory;
+    b->addedDate = tempDate;
+}
+
+bool bookExists(const string& title, const string& author) {
+    Book* temp = head;
+    while (temp) {
+        if (caseInsensitiveCompare(temp->title, title) &&
+            caseInsensitiveCompare(temp->author, author)) {
+            return true;
+        }
+        temp = temp->next;
+    }
+    return false;
+}
+
+void addBookToList(const string& title, const string& author, int year,
+                  const string& category, const string& addedDate,
+                  int totalCopies, int availableCopies) {
+    Book* newBook = new Book{title, author, year, totalCopies, availableCopies,
+                            category, addedDate, NULL, NULL};
+    if (!head) {
+        head = newBook;
+    } else {
+        Book* temp = head;
+        while (temp->next)
+            temp = temp->next;
+        temp->next = newBook;
+        newBook->prev = temp;
+    }
+}
+
+void sortBooksByTitle(const string& category) {
+    if (!head || !head->next) {
+        cout << " Not enough books to sort.\n";
+        return;
+    }
+
+    bool swapped;
+    Book *start = head;
+    Book *end = NULL;
+
+    do {
+        swapped = false;
+        Book *current = start;
+
+        while (current->next != end) {
+            bool shouldSwap = false;
+
+            if (caseInsensitiveCompare(current->category, category) &&
+                caseInsensitiveCompare(current->next->category, category)) {
+                string title1 = current->title;
+                string title2 = current->next->title;
+                transform(title1.begin(), title1.end(), title1.begin(), ::tolower);
+                transform(title2.begin(), title2.end(), title2.begin(), ::tolower);
+                shouldSwap = title1 > title2;
+            }
+
+            if (shouldSwap) {
+                swapBooks(current, current->next);
+                swapped = true;
+            }
+            current = current->next;
+        }
+        end = current;
+    } while (swapped);
+
+    saveToFile();
+    cout << "\nBooks in category '" << category << "' sorted by title:\n";
+    displayBooksByCategory(category);
+}
+
+void sortBooksMenu() {
+    string category = selectCategory();
+    if (category.empty()) {
+        cout << "Sorting cancelled.\n";
+        return;
+    }
+
+    sortBooksByTitle(category);
+}
+
+void displayBooksMenu() {
+    int choice;
+    do {
+        cout << "\n---------- Display Options -----------\n";
+        cout << "1. Display All Books\n";
+        cout << "2. Display Books by Category\n";
+        cout << "3. Back to Main Menu\n";
+
+        if (!getSafeInt(choice, "Enter your choice (1-3): ", 1, 3)) continue;
+
+        switch (choice) {
+            case 1:
+                displayAllBooks();
+                break;
+            case 2: {
+                string category = selectCategory();
+                if (!category.empty()) {
+                    displayBooksByCategory(category);
+                }
+                break;
+            }
+            case 3:
+                return;
+        }
+    } while (true);
+}
