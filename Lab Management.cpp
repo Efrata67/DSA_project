@@ -843,3 +843,94 @@ void updateBook() {
     }
     cout << "Book not found in category '" << category << "'.\n";
 }
+
+void saveBorrowRecords() {
+ofstream file("borrow_records.txt");
+BorrowRecord* temp = borrowHead;
+while (temp) {
+    file << temp->bookTitle << "|" << temp->bookCategory << "|"
+         << temp->borrowerName << "|" << temp->borrowerId << "|"
+         << temp->borrowedCopies << "|" << temp->borrowDate << "|"
+         << temp->returnDate << "|" << (temp->returned ? "1" : "0") << "\n";
+    temp = temp->next;
+}
+file.close();
+}
+
+void loadBorrowRecords() {
+ifstream file("borrow_records.txt");
+string line;
+
+while (getline(file, line)) {
+    string tokens[8];
+    size_t pos = 0;
+    int i = 0;
+    while ((pos = line.find('|')) != string::npos && i < 7) {
+        tokens[i++] = line.substr(0, pos);
+        line.erase(0, pos + 1);
+    }
+    tokens[7] = line;
+
+    if (i >= 7) {
+        BorrowRecord* newRecord = new BorrowRecord{
+            tokens[0], tokens[1], tokens[2], tokens[3],
+            stoi(tokens[4]), tokens[5], tokens[6],
+            tokens[7] == "1", NULL
+        };
+
+        if (!borrowHead) {
+            borrowHead = newRecord;
+        } else {
+            BorrowRecord* temp = borrowHead;
+            while (temp->next) {
+                temp = temp->next;
+            }
+            temp->next = newRecord;
+        }
+    }
+}
+file.close();
+}
+
+void addBorrowRecord(const string& title, const string& category, const string& name,
+                const string& id, int copies, const string& borrowDate,
+                const string& returnDate) {
+BorrowRecord* newRecord = new BorrowRecord{
+    title, category, name, id, copies, borrowDate, returnDate, false, NULL
+};
+
+if (!borrowHead) {
+    borrowHead = newRecord;
+} else {
+    BorrowRecord* temp = borrowHead;
+    while (temp->next) {
+        temp = temp->next;
+    }
+    temp->next = newRecord;
+}
+saveBorrowRecords();
+}
+
+void displayBorrowRules() {
+cout << "\n--------- Borrowing Rules -----------\n";
+cout << "1. You can borrow one copy of any book, but not multiple copies of the same book.\n";
+cout << "2. The standard borrowing period is 14 days.\n";
+cout << "3. Late returns will incur a fine of 5 birr per day.\n";
+cout << "4. Books must be returned in the same condition as borrowed.\n";
+cout << "5. Lost or damaged books must be replaced or paid for.\n";
+cout << "-----------------------------------------------\n";
+}
+
+bool hasBorrowedSpecificBook(const string& borrowerId, const string& title, const string& category) {
+BorrowRecord* temp = borrowHead;
+while (temp) {
+    if (caseInsensitiveCompare(temp->borrowerId, borrowerId) &&
+        caseInsensitiveCompare(temp->bookTitle, title) &&
+        caseInsensitiveCompare(temp->bookCategory, category) &&
+        !temp->returned) {
+        return true;
+    }
+    temp = temp->next;
+}
+return false;
+}
