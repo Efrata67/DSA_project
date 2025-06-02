@@ -33,3 +33,121 @@ struct BorrowRecord {
     bool returned;
     BorrowRecord* next;
 };
+
+bool caseInsensitiveCompare(const string& str1, const string& str2) {
+    if (str1.length() != str2.length()) {
+        return false;
+    }
+    for (size_t i = 0; i < str1.length(); ++i) {
+        if (tolower(str1[i]) != tolower(str2[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
+Book* head = NULL;
+BorrowRecord* borrowHead = NULL;
+
+
+bool isDigit(char c) {
+    return c >= '0' && c <= '9';
+}
+
+bool isAlpha(char c) {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
+bool isValidInput(const string& input, const string& pattern, int minLength) {
+    if (input.length() < minLength) {
+        cout << " Input must be at least " << minLength << " characters long.\n";
+        return false;
+    }
+    regex reg(pattern);
+    if (!regex_match(input, reg)) {
+        cout << " Invalid input format. Only letters and spaces allowed.\n";
+        return false;
+    }
+    return true;
+}
+
+bool getSafeInt(int& result, const string& prompt, int min, int max) {
+    string input;
+    while (true) {
+        cout << prompt;
+        getline(cin, input);
+        bool isValid = !input.empty();
+        for (char c : input) {
+            if (!isDigit(c)) {
+                isValid = false;
+                break;
+            }
+        }
+
+        if (!isValid) {
+            cout << " Invalid input. Please enter a valid number.\n";
+        } else {
+            result = stoi(input);
+            if (result >= min && result <= max) {
+                return true;
+            } else {
+                cout << " Please enter a number between " << min << " and " << max << ".\n";
+            }
+        }
+    }
+}
+
+string getCurrentDateTime() {
+    time_t now = time(0);
+    string dt = ctime(&now);
+    return dt.substr(0, dt.length()-1);
+}
+
+string calculateReturnDate(int days = 14) {
+    time_t now = time(0);
+    now += days * 24 * 60 * 60;
+    string dt = ctime(&now);
+    return dt.substr(0, dt.length()-1);
+}
+
+time_t stringToTime(const string& dateStr) {
+    struct tm tm = {0};
+    istringstream iss(dateStr);
+    string day, month, timeStr, yearStr;
+    int dayNum, year;
+
+    iss >> day >> month >> dayNum >> timeStr >> yearStr;
+
+    size_t colon1 = timeStr.find(':');
+    size_t colon2 = timeStr.rfind(':');
+    int hour = stoi(timeStr.substr(0, colon1));
+    int minute = stoi(timeStr.substr(colon1+1, colon2-colon1-1));
+    int second = stoi(timeStr.substr(colon2+1));
+
+    const char* months[] = {"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
+    int monthNum = 0;
+    for (int i = 0; i < 12; i++) {
+        if (month == months[i]) {
+            monthNum = i;
+            break;
+        }
+    }
+
+    year = stoi(yearStr);
+
+    tm.tm_year = year - 1900;
+    tm.tm_mon = monthNum;
+    tm.tm_mday = dayNum;
+    tm.tm_hour = hour;
+    tm.tm_min = minute;
+    tm.tm_sec = second;
+    tm.tm_isdst = -1;
+
+    return mktime(&tm);
+}
+
+int daysBetweenDates(const string& date1, const string& date2) {
+    time_t t1 = stringToTime(date1);
+    time_t t2 = stringToTime(date2);
+    return difftime(t2, t1) / (60 * 60 * 24);
+}
