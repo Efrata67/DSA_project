@@ -711,3 +711,135 @@ void deleteBook() {
     }
     cout << " Book not found in category '" << category << "'.\n";
 }
+
+void updateBook() {
+    cout << "\n===== Update Book =====\n";
+
+    string category = selectCategory();
+    if (category.empty()) {
+        cout << "Update cancelled.\n";
+        return;
+    }
+
+    string title;
+    cout << "Enter title of the book to update in category '" << category << "': ";
+    getline(cin, title);
+
+    Book* temp = head;
+    while (temp) {
+        if (caseInsensitiveCompare(temp->category, category) &&
+            caseInsensitiveCompare(temp->title, title)) {
+            cout << "\n--- Current Book Information ---";
+            displayBookDetails(temp);
+
+            cout << "\nEnter new details for the book (leave blank to keep current value):\n";
+
+            string newTitle;
+            cout << "Enter new title [" << temp->title << "]: ";
+            getline(cin, newTitle);
+            if (!newTitle.empty()) {
+                while (!isValidInput(newTitle, "^[a-zA-Z ]+$", 4)) {
+                    cout << "Enter new title [" << temp->title << "]: ";
+                    getline(cin, newTitle);
+                    if (newTitle.empty()) break;
+                }
+                if (!newTitle.empty()) {
+                    if (bookExists(newTitle, temp->author)) {
+                        cout << "A book with this title and author already exists.\n";
+                        return;
+                    }
+                    temp->title = newTitle;
+                }
+            }
+
+            string newAuthor;
+            cout << "Enter new author [" << temp->author << "]: ";
+            getline(cin, newAuthor);
+            if (!newAuthor.empty()) {
+                while (!isValidInput(newAuthor, "^[a-zA-Z ]+$", 4)) {
+                    cout << "Enter new author [" << temp->author << "]: ";
+                    getline(cin, newAuthor);
+                    if (newAuthor.empty()) break;
+                }
+                if (!newAuthor.empty()) {
+                    if (bookExists(temp->title, newAuthor)) {
+                        cout << "A book with this title and author already exists.\n";
+                        return;
+                    }
+                    temp->author = newAuthor;
+                }
+            }
+
+            cout << "\nCurrent category: " << temp->category << endl;
+            cout << "Select new category:\n";
+            string newCategory = selectCategory();
+            if (!newCategory.empty()) {
+                temp->category = newCategory;
+            }
+
+            string yearInput;
+            int newYear;
+            cout << "Enter new year [" << temp->year << "]: ";
+            getline(cin, yearInput);
+            if (!yearInput.empty()) {
+                while (true) {
+                    bool valid = true;
+                    for (char c : yearInput) {
+                        if (!isDigit(c)) {
+                            valid = false;
+                            break;
+                        }
+                    }
+                    if (valid) {
+                        newYear = stoi(yearInput);
+                        if (newYear >= 1800 && newYear <= 2025) {
+                            temp->year = newYear;
+                            break;
+                        }
+                    }
+                    cout << "Please enter a valid year between 1800 and 2025 [" << temp->year << "]: ";
+                    getline(cin, yearInput);
+                    if (yearInput.empty()) break;
+                }
+            }
+
+            string copiesInput;
+            int newTotalCopies;
+            cout << "Enter new total copies [" << temp->totalCopies << "]: ";
+            getline(cin, copiesInput);
+            if (!copiesInput.empty()) {
+                while (true) {
+                    bool valid = true;
+                    for (char c : copiesInput) {
+                        if (!isDigit(c)) {
+                            valid = false;
+                            break;
+                        }
+                    }
+                    if (valid) {
+                        newTotalCopies = stoi(copiesInput);
+                        if (newTotalCopies >= 1 && newTotalCopies <= 1000) {
+                            int difference = newTotalCopies - temp->totalCopies;
+                            temp->availableCopies += difference;
+                            if (temp->availableCopies < 0) temp->availableCopies = 0;
+                            if (temp->availableCopies > newTotalCopies) temp->availableCopies = newTotalCopies;
+                            temp->totalCopies = newTotalCopies;
+                            break;
+                        }
+                    }
+                    cout << "Please enter a valid number between 1 and 1000 [" << temp->totalCopies << "]: ";
+                    getline(cin, copiesInput);
+                    if (copiesInput.empty()) break;
+                }
+            }
+
+            saveToFile();
+            cout << "\nBook updated successfully!\n";
+            cout << "--- Updated Book Information ---";
+            displayBookDetails(temp);
+            return;
+        }
+        temp = temp->next;
+    }
+    cout << "Book not found in category '" << category << "'.\n";
+}
