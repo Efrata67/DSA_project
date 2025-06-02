@@ -442,3 +442,56 @@ void displayBooksMenu() {
         }
     } while (true);
 }
+
+void saveToFile() {
+    ofstream file("library_data.txt");
+    Book* temp = head;
+    while (temp) {
+        file << temp->title << "|" << temp->author << "|" << temp->year << "|"
+             << temp->totalCopies << "|" << temp->availableCopies << "|"
+             << temp->category << "|" << temp->addedDate << "\n";
+        temp = temp->next;
+    }
+    file.close();
+}
+
+void loadFromFile() {
+    ifstream file("library_data.txt");
+    string line;
+    bool isEmpty = true;
+
+    while (getline(file, line)) {
+        isEmpty = false;
+        string tokens[7];
+        size_t pos = 0;
+        int i = 0;
+        while ((pos = line.find('|')) != string::npos && i < 6) {
+            tokens[i++] = line.substr(0, pos);
+            line.erase(0, pos + 1);
+        }
+        tokens[6] = line;
+
+        if (i >= 6) {
+            string title = tokens[0];
+            string author = tokens[1];
+            int year = stoi(tokens[2]);
+            int totalCopies = stoi(tokens[3]);
+            int availableCopies = stoi(tokens[4]);
+            string category = tokens[5];
+            string addedDate = tokens[6];
+
+            addBookToList(title, author, year, category, addedDate, totalCopies, availableCopies);
+        }
+    }
+    file.close();
+
+    if (isEmpty) {
+        string dt = getCurrentDateTime();
+        addBookToList("Fikir Ena Desita", "Hana Gebreegziabher", 2005, "Fiction", dt, 3, 3);
+        addBookToList("Sew LeSew", "Aregawi Desalegn", 1998, "History", dt, 2, 2);
+        addBookToList("Yetintawi Tarik Tarik", "Molla Abebe", 2010, "Fiction", dt, 1, 1);
+        addBookToList("Introduction to Algorithms", "Thomas H. Cormen", 2009, "Computer Science", dt, 5, 5);
+        addBookToList("Clean Code", "Robert C. Martin", 2008, "Computer Science", dt, 4, 4);
+        saveToFile();
+    }
+}
