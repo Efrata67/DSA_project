@@ -1117,7 +1117,36 @@ void returnBook() {
     } else {
         cout << " Book returned on time. Thank you!\n";
     }
-
-    cout << "------------------------------------\n";
+ cout << "------------------------------------\n";
 }
 
+
+
+
+
+int main() {
+    loadFromFile();
+    loadBorrowRecords();
+    int choice;
+
+    do {
+        choice = getMenuChoice();
+        switch (choice) {
+            case 1: addBooks(); break;
+            case 2: displayBooksMenu(); break;
+            case 3: searchBooks(); break;
+            case 4: deleteBook(); break;
+            case 5: countBooksMenu(); break;
+            case 6: sortBooks(); break;
+            case 7: deleteAllBooks(); break;
+            case 8:  updateBook(); break;
+            case 9:  borrowBook(); break;
+            case 10: borrowMultipleBooks(); break;
+            case 11: returnBook(); break;
+            case 12: cout << "Exiting Library System.\n"; break;
+        }
+    } while (choice != 12);
+
+    cleanup();
+    return 0;
+}
