@@ -1016,6 +1016,121 @@ void borrowBook() {
     cout << "Book not found in category '" << category << "'.\n";
 }
 
+void borrowMultipleBooks() {
+    cout << "\n----------- Borrow Multiple Books ------------\n";
+
+    string borrowerName, borrowerId;
+    do {
+        cout << "Enter your full name (minimum 3 letters, no numbers): ";
+        getline(cin, borrowerName);
+    } while (!isValidInput(borrowerName, "^[a-zA-Z ]+$", 3));
+
+    do {
+        cout << "Enter your ID (minimum 3 characters, letters or numbers): ";
+        getline(cin, borrowerId);
+        if (borrowerId.length() < 3) {
+            cout << "ID must be at least 3 characters long.\n";
+        }
+    } while (borrowerId.length() < 3);
+
+    int numBooks;
+    if (!getSafeInt(numBooks, "Enter the number of books to borrow (2-5): ", 2, 5)) return;
+
+    struct BorrowInfo {
+        string category;
+        string title;
+        Book* book;
+    };
+
+    BorrowInfo borrows[5];
+    int borrowCount = 0;
+
+    for (int i = 0; i < numBooks; i++) {
+        cout << "\n--- Selecting Book #" << i+1 << " ---\n";
+        string category = selectCategory();
+        if (category.empty()) {
+            cout << "Borrowing cancelled.\n";
+            return;
+        }
+
+        displayBooksByCategory(category);
+
+        string title;
+        cout << "Enter the title of the book to borrow: ";
+        getline(cin, title);
+
+        Book* temp = head;
+        bool found = false;
+        while (temp) {
+            if (caseInsensitiveCompare(temp->category, category) &&
+                caseInsensitiveCompare(temp->title, title)) {
+                found = true;
+                if (temp->availableCopies <= 0) {
+                    cout << "Sorry, no copies of this book are currently available.\n";
+                    return;
+                }
+                if (hasBorrowedSpecificBook(borrowerId, title, category)) {
+                    cout << "Sorry, you have already borrowed a copy of this book.\n";
+                    return;
+                }
+                // Check if book is already selected in this session
+                for (int j = 0; j < borrowCount; j++) {
+                    if (caseInsensitiveCompare(borrows[j].title, title) &&
+                        caseInsensitiveCompare(borrows[j].category, category)) {
+                        cout << "You have already selected this book in this borrowing session.\n";
+                        return;
+                    }
+                }
+                borrows[borrowCount] = {category, title, temp};
+                borrowCount++;
+                break;
+            }
+            temp = temp->next;
+        }
+        if (!found) {
+            cout << "Book not found in category '" << category << "'. Borrowing cancelled.\n";
+            return;
+        }
+    }
+
+    displayBorrowRules();
+    cout << "\nYou are about to borrow the following books:\n";
+    for (int i = 0; i < borrowCount; i++) {
+        cout << i+1 << ". " << borrows[i].title << " (" << borrows[i].category << ")\n";
+    }
+
+    char confirm;
+    cout << "Do you want to proceed with borrowing these " << borrowCount << " books? (y/n): ";
+    cin >> confirm;
+    cin.ignore();
+
+    if (tolower(confirm) != 'y') {
+        cout << "Borrowing cancelled.\n";
+        return;
+    }
+
+    string borrowDate = getCurrentDateTime();
+    string returnDate = calculateReturnDate(14);
+
+    cout << "\n--------- Borrowing Confirmation -----------\n";
+    cout << " Borrower Name: " << borrowerName << "\n";
+    cout << " Borrower ID: " << borrowerId << "\n";
+    cout << " Borrow Date: " << borrowDate << "\n";
+    cout << " Due Date: " << returnDate << "\n";
+    cout << " Books Borrowed:\n";
+
+    for (int i = 0; i < borrowCount; i++) {
+        borrows[i].book->availableCopies -= 1;
+        addBorrowRecord(borrows[i].title, borrows[i].category, borrowerName,
+                       borrowerId, 1, borrowDate, returnDate);
+        cout << " - " << borrows[i].title << " (" << borrows[i].category << ")\n";
+    }
+
+    saveToFile();
+    cout << "------------------------------------------\n";
+    cout << "Thank you for borrowing from our library!\n";
+}
+
 void returnBook() {
     string category = selectCategory();
     if (category.empty()) {
@@ -1121,8 +1236,132 @@ void returnBook() {
 }
 
 
+void deleteAllBooks() {
+    int choice;
+    cout << "\n-------- Delete Options --------\n";
+    cout << "1. Delete All Books in a Specific Category\n";
+    cout << "2. Delete All Books in the Library\n";
+    cout << "3. Cancel and Return to Main Menu\n";
 
+    if (!getSafeInt(choice, "Enter your choice (1-3): ", 1, 3)) return;
 
+    if (choice == 3) {
+        cout << "Delete operation cancelled.\n";
+        return;
+    }
+
+    string category;
+    if (choice == 1) {
+        category = selectCategory();
+        if (category.empty()) {
+            cout << "Delete operation cancelled.\n";
+            return;
+        }
+    }
+
+    cout << "\nWARNING: This action cannot be undone!\n";
+    if (choice == 1) {
+        cout << "You are about to delete ALL books in category: " << category << "\n";
+    } else {
+        cout << "You are about to delete ALL books in the library!\n";
+    }
+
+    char confirm;
+    cout << "Are you sure you want to proceed? (y/n): ";
+    cin >> confirm;
+    cin.ignore();
+
+    if (tolower(confirm) != 'y') {
+        cout << "Delete operation cancelled.\n";
+        return;
+    }
+
+    string deletionTime = getCurrentDateTime();
+    int deletedCount = 0;
+    Book* current = head;
+    Book* nextNode;
+
+    while (current) {
+        nextNode = current->next;
+        if (choice == 2 || (choice == 1 && caseInsensitiveCompare(current->category, category))) {
+            if (current->prev)
+                current->prev->next = current->next;
+            else
+                head = current->next;
+
+            if (current->next)
+                current->next->prev = current->prev;
+
+            delete current;
+            deletedCount++;
+        }
+        current = nextNode;
+    }
+
+    ofstream logfile("library_deletions.log", ios::app);
+    if (logfile.is_open()) {
+        if (choice == 1) {
+            logfile << "Deleted ALL books in category '" << category
+                   << "' (" << deletedCount << " books) on " << deletionTime << "\n";
+        } else {
+            logfile << "Deleted ALL books in library (" << deletedCount
+                   << " books) on " << deletionTime << "\n";
+        }
+        logfile.close();
+    }
+
+    saveToFile();
+    cout << "\n------ Deletion Summary ------\n";
+    cout << "Time of deletion: " << deletionTime << "\n";
+    if (choice == 1) {
+        cout << "Category deleted: " << category << "\n";
+    }
+    cout << "Number of books deleted: " << deletedCount << "\n";
+    cout << "Operation completed successfully.\n";
+}
+
+void sortBooks() {
+    sortBooksMenu();
+}
+
+void cleanup() {
+    Book* tempBook;
+    while (head) {
+        tempBook = head;
+        head = head->next;
+        delete tempBook;
+    }
+
+    BorrowRecord* tempRecord;
+    while (borrowHead) {
+        tempRecord = borrowHead;
+        borrowHead = borrowHead->next;
+        delete tempRecord;
+    }
+}
+
+int getMenuChoice() {
+    int choice;
+    while (true) {
+        cout << "\n>>>>>>>>>>  DILLA UNIVERSITY LIBRARY MANAGEMENT SYSTEM  <<<<<<<<<<<\n";
+         cout << "\n----------  Library Menu ---------\n";
+        cout << "1.  Add Books\n";
+        cout << "2.  Display Books\n";
+        cout << "3.  Search Book (by category)\n";
+        cout << "4.  Delete Book Copies\n";
+        cout << "5.  Count Books\n";
+        cout << "6.  Sort Books\n";
+        cout << "7.  Delete All Books\n";
+        cout << "8.  Update Book\n";
+        cout << "9.  Borrow One Book\n";
+        cout << "10. Borrow Multiple Books\n";
+        cout << "11. Return Book\n";
+        cout << "12. Exit\n";
+        if (getSafeInt(choice, "Enter your choice (1-12): ", 1, 12)) {
+            return choice;
+        }
+    }
+}
 
 int main() {
     loadFromFile();
